@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+// In production (Vercel), set VITE_API_URL in Vercel environment variables
+// pointing to your deployed backend e.g. https://your-backend.railway.app/api
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: BASE_URL,
+  timeout: 10000,
 });
 
 api.interceptors.request.use((config) => {
@@ -15,6 +20,7 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(err);

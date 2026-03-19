@@ -12,12 +12,17 @@ export default function Dashboard() {
   const [form, setForm] = useState({ title: '', inputText: '', operation: 'uppercase' });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [apiError, setApiError] = useState('');
 
   const fetchTasks = useCallback(async () => {
     try {
       const { data } = await api.get('/tasks');
       setTasks(data);
-    } catch {}
+      setApiError('');
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err.message);
+      setApiError('Cannot reach the backend API. Make sure VITE_API_URL is set in Vercel environment variables pointing to your deployed backend.');
+    }
   }, []);
 
   useEffect(() => {
@@ -62,6 +67,13 @@ export default function Dashboard() {
           <button className="btn-danger btn-sm" onClick={handleLogout}>Logout</button>
         </div>
       </div>
+
+      {/* API Error Banner */}
+      {apiError && (
+        <div style={{ background: '#450a0a', border: '1px solid #ef4444', borderRadius: 8, padding: '12px 16px', marginBottom: 20, color: '#fca5a5', fontSize: 13 }}>
+          ⚠️ {apiError}
+        </div>
+      )}
 
       {/* Create Task */}
       <div className="card" style={{ marginBottom: 24 }}>

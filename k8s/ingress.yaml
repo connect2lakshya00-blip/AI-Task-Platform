@@ -1,0 +1,75 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: ai-task-platform
+  labels:
+    app: ai-task-platform
+  annotations:
+    # Nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+
+    # Route /api/* to backend WITHOUT stripping the /api prefix
+    # The backend expects requests at /api/auth/... and /api/tasks/...
+    nginx.ingress.kubernetes.io/use-regex: "true"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+
+    # TLS — managed by cert-manager (comment out for local dev)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Rate limiting at ingress level
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+
+    # Proxy timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+
+    # Body size limit (for task input text)
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+
+spec:
+  ingressClassName: nginx
+  # TLS block — replace host with your real domain in production.
+  # For local development with minikube, comment out the tls section
+  # and change the host below to "localhost" or use minikube tunnel.
+  tls:
+    - hosts:
+        - app.example.com
+      secretName: app-tls-secret
+  rules:
+    - host: app.example.com
+      # For local dev with minikube, change to:
+      # host: localhost
+      http:
+        paths:
+          # API routes — proxied to backend service (prefix NOT stripped)
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 5000
+          # Health check endpoint
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 5000
+          # All other routes — served by frontend (SPA)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80

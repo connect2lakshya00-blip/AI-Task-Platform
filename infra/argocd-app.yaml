@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-task-platform
+  namespace: argocd
+  labels:
+    app: ai-task-platform
+    environment: production
+  # Finalizer ensures Argo CD cleans up resources when the Application is deleted
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    # Replace with your actual GitHub repository URL
+    repoURL: https://github.com/connect2lakshya00-blip/AI-Task-Platform
+    targetRevision: HEAD
+    path: k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-task-platform
+
+  syncPolicy:
+    # Automated sync: Argo CD will apply changes whenever the repo is updated
+    automated:
+      # Remove resources from the cluster that are no longer in Git
+      prune: true
+      # Revert any manual changes made directly to the cluster
+      selfHeal: true
+      # Do not sync during an active rollout window (optional, set via project)
+      allowEmpty: false
+
+    syncOptions:
+      # Create the namespace if it doesn't exist
+      - CreateNamespace=true
+      # Apply server-side to handle large CRDs and avoid annotation size limits
+      - ServerSideApply=true
+      # Respect the order of resource creation (e.g. namespace before deployments)
+      - RespectIgnoreDifferences=true
+
+    # Retry failed syncs with exponential backoff
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Ignore differences that are managed externally (e.g. HPA replica count)
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /spec/minReplicas
+        - /spec/maxReplicas
+
+  # Health check overrides
+  revisionHistoryLimit: 5

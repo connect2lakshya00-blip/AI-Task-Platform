@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ai-task-platform
+data:
+  MONGO_URI: "mongodb://mongo-service:27017/aitasks"
+  REDIS_URL: "redis://redis-service:6379"
+  NODE_ENV: "production"
+  PORT: "5000"
